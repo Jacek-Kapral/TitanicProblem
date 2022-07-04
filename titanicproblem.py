@@ -1,56 +1,45 @@
 import pandas as pd
-#import numpy as np
+import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sea
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
 
-daneTytanica = pd.read_csv('train.csv')
-print(daneTytanica)
 
-sea.heatmap(daneTytanica.corr(), cmap="Oranges")
-plt.show()
+dane_tytanica = pd.read_csv('train.csv')
+print(dane_tytanica.head())
 
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.impute import SimpleImputer
+#usuniecie bezuzytecznych danych oraz uzupelnienie danych brakujacych
 
-class UzupelniaczWieku(BaseEstimator, TransformerMixin):
-    def fit(self, X, y=None):
-        return self
-    def transform(self, X):
-        uzupelniacz = SimpleImputer(strategy="mean")
-        X['Age'] = uzupelniacz.fit_transform(X[['Age']])
-        return X
-from sklearn.preprocessing import OneHotEncoder
+dane_tytanica = dane_tytanica.drop(columns='Cabin', axis=1)
 
-class CechyPasazera(BaseEstimator, TransformerMixin):
-    def fit(self, X, y=None):
-        return self
-    def transform(self, X):
-        enkodowanie = OneHotEncoder()
-        macierz = enkodowanie.fit_transform(X[['Embarked']]).toarray()
-        nazwy_kolumn = ["C", "S", "Q", "N"]
+dane_tytanica['Age'].fillna(dane_tytanica['Age'].mean(), inplace=True)
 
-        for i in range(len(macierz.T)):
-            X[nazwy_kolumn[i]] = macierz.T[i]
+dane_tytanica['Embarked'].fillna(dane_tytanica['Embarked'].mode()[0], inplace=True)
 
-        macierz = enkodowanie.fit_transform(X, [['Sex']]).toarray()
+# print(dane_tytanica.isnull().sum())
+# print(dane_tytanica.describe())
+# print(dane_tytanica['Survived'].value_counts())
 
-        nazwy_kolumn = ["Female", "Male"]
+dane_tytanica.replace({'Sex':{'male':0, 'female':1}, 'Embarked':{'S':0, 'C':1, 'Q':2}}, inplace=True)
 
-        for i in range(len(macierz.T)):
-            X[nazwy_kolumn[i]] = macierz.T[i]
-        return X
+print(dane_tytanica.head())
 
-class PomijaczCech(BaseEstimator, TransformerMixin):
-    def fit(self, X, y=None):
-        return self
+#dalsze filtrowanie danych
+ZestawX = dane_tytanica.drop(columns = ['PassengerId', 'Name', 'Ticket', 'Survived'], axis=1)
+ZestawY = dane_tytanica['Survived']
 
-    def transform(self, X):
-        return X.drop(["Embarked", "Name", "Ticket", "Cabin", "N", "Sex"], axis=1, errors="ignore")
+X_trening, X_test, Y_trening, Y_test = train_test_split(ZestawX, ZestawY, test_size=0.2, random_state=2)
 
-from sklearn.pipeline import Pipeline
+model_treningowy = LogisticRegression()
+model_treningowy.fit(X_trening, Y_trening)
 
-przefiltrowanedane = Pipeline([("uzupelniaczwieku", UzupelniaczWieku()),
-                     ("cechypasazera", CechyPasazera()),
-                     ("pomijaczcech", PomijaczCech())])
+X_predykcja = model_treningowy.predict(X_trening)
+print(X_predykcja)
 
-zestaw_treningowy = przefiltrowanedane.fit_transform()
+trafnosc_predykcji = accuracy_score(Y_trening, X_predykcja)
+print("Trafność predykcji w oparciu o dane treningowe:", trafnosc_predykcji)
+
+trafnosc_danych_testowych = accuracy_score(Y_test, X_predykcja)
+print("Trafność predykcji w oparciu o dane testowe:", trafnosc_danych_testowych)
