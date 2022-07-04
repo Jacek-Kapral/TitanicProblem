@@ -5,7 +5,6 @@ train = train.dropna()
 y = train['Survived']
 X = train.drop(['Survived', 'PassengerId', 'Name', 'Ticket'], 1, inplace=True)
 X = pd.get_dummies(train)
-
 test = pd.read_csv("test.csv")
 ids = test[['PassengerId']]
 test.drop(['PassengerId', 'Name', 'Ticket', 'Cabin'], 1, inplace=True)
